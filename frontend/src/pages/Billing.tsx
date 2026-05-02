@@ -43,7 +43,7 @@ export default function Billing({ onUpdate }: { onUpdate?: (user: any) => void }
   // Show skeleton while pricing loads from the database
   if (pricingLoading) return <BillingSkeleton />;
 
-  const planOrder: PlanKey[] = ['Trial', 'Basic', 'Pro', 'Premium'];
+  const planOrder: PlanKey[] = ['Free', 'Trial', 'Basic', 'Pro', 'Premium'];
   const currentPlanIndex = planOrder.indexOf(currentPlan as PlanKey);
 
   const plans = [
@@ -150,25 +150,49 @@ export default function Billing({ onUpdate }: { onUpdate?: (user: any) => void }
     return `Upgrade to ${PLAN_TIERS[planKey].name}`;
   };
 
-  // Trial expiry calculation
-  const trialExpiresAt = user.expiresAt ? new Date(user.expiresAt) : null;
+  // Subscription expiry calculation (works for both Trial, Free, and paid plans)
+  const expiresAt = user.expiresAt ? new Date(user.expiresAt) : null;
   const now = new Date();
-  const trialDaysLeft = trialExpiresAt ? Math.max(0, Math.ceil((trialExpiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))) : 0;
-  const isTrialExpired = currentPlan === 'Trial' && trialDaysLeft <= 0;
-  const isTrialActive = currentPlan === 'Trial' && trialDaysLeft > 0;
+  const daysLeft = expiresAt ? Math.max(0, Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))) : 0;
+  const isFreePlan = currentPlan === 'Free'; // Expired subscription — downgraded
+  const isTrialExpired = currentPlan === 'Trial' && (!expiresAt || daysLeft <= 0);
+  const isTrialActive = currentPlan === 'Trial' && daysLeft > 0;
+  const isPaidPlanActive = !['Trial', 'Free'].includes(currentPlan) && expiresAt && daysLeft > 0;
+  const isPaidPlanExpiringSoon = isPaidPlanActive && daysLeft <= 5;
+  const needsSubscription = isFreePlan || isTrialExpired;
 
   return (
     <div className="space-y-8">
-      {/* Trial Expired Alert */}
-      {isTrialExpired && (
+      {/* Subscription Required Alert (Free/Expired) */}
+      {needsSubscription && (
         <div className="p-6 rounded-2xl flex items-start gap-4 bg-red-50 border border-red-200">
           <div className="p-3 rounded-xl bg-red-100 text-red-600">
             <AlertCircle className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-red-900">Free Trial Ended</h2>
+            <h2 className="text-lg font-bold text-red-900">Subscription Required</h2>
             <p className="text-sm text-red-700">
-              Your 7-day free trial has expired. Subscribe to a plan below to continue using all FixTrack Pro features.
+              {isFreePlan
+                ? 'Your previous subscription has expired. You are now on the Free plan with limited features. Subscribe to a plan below to restore full access.'
+                : expiresAt 
+                ? 'Your free trial has ended. Subscribe to a plan below to continue using all FixTrack Pro features.'
+                : 'Your subscription has expired. Subscribe to a plan below to restore full access.'}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Paid Plan Expiring Soon Warning */}
+      {isPaidPlanExpiringSoon && (
+        <div className="p-6 rounded-2xl flex items-start gap-4 bg-amber-50 border border-amber-200">
+          <div className="p-3 rounded-xl bg-amber-100 text-amber-600">
+            <AlertCircle className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-amber-900">Subscription Expiring Soon</h2>
+            <p className="text-sm text-amber-700">
+              Your {currentPlan} plan expires in {daysLeft} day{daysLeft !== 1 ? 's' : ''}. 
+              Renew now to avoid losing access to your premium features.
             </p>
           </div>
         </div>
@@ -176,34 +200,39 @@ export default function Billing({ onUpdate }: { onUpdate?: (user: any) => void }
 
       {/* Current Plan Banner */}
       <div className={`p-6 rounded-2xl flex items-start gap-4 ${
-        isTrialActive ? 'bg-indigo-50 border border-indigo-100' 
-        : isTrialExpired ? 'bg-red-50 border border-red-200'
+        needsSubscription ? 'bg-red-50 border border-red-200'
+        : isTrialActive ? 'bg-indigo-50 border border-indigo-100' 
         : 'bg-emerald-50 border border-emerald-100'
       }`}>
         <div className={`p-3 rounded-xl ${
-          isTrialActive ? 'bg-indigo-100 text-indigo-600' 
-          : isTrialExpired ? 'bg-red-100 text-red-600'
+          needsSubscription ? 'bg-red-100 text-red-600'
+          : isTrialActive ? 'bg-indigo-100 text-indigo-600' 
           : 'bg-emerald-100 text-emerald-600'
         }`}>
           <AlertCircle className="w-6 h-6" />
         </div>
         <div>
           <h2 className={`text-lg font-bold ${
-            isTrialActive ? 'text-indigo-900' : isTrialExpired ? 'text-red-900' : 'text-emerald-900'
+            needsSubscription ? 'text-red-900' : isTrialActive ? 'text-indigo-900' : 'text-emerald-900'
           }`}>
-            {isTrialExpired ? 'Trial Expired — Subscribe Now'
-              : isTrialActive ? `Free Trial Active — ${trialDaysLeft} day${trialDaysLeft !== 1 ? 's' : ''} remaining`
+            {needsSubscription ? 'Subscribe Now'
+              : isTrialActive ? `Free Trial Active — ${daysLeft} day${daysLeft !== 1 ? 's' : ''} remaining`
+              : isPaidPlanActive ? `${currentPlan} Plan Active — ${daysLeft} day${daysLeft !== 1 ? 's' : ''} remaining`
               : `${currentPlan} Plan Active`
             }
           </h2>
           <p className={`text-sm ${
-            isTrialActive ? 'text-indigo-700' : isTrialExpired ? 'text-red-700' : 'text-emerald-700'
+            needsSubscription ? 'text-red-700' : isTrialActive ? 'text-indigo-700' : 'text-emerald-700'
           }`}>
-            {isTrialActive
-              ? `You have full access to all features during your trial. ${trialDaysLeft <= 2 ? 'Subscribe now to avoid interruption!' : 'Upgrade anytime to continue after trail ends.'}`
+            {isFreePlan
+              ? 'Your previous subscription has expired. Choose a plan below to restore full access.'
+              : isTrialActive
+              ? `You have full access to all features during your trial. ${daysLeft <= 2 ? 'Subscribe now to avoid interruption!' : 'Upgrade anytime to continue after trial ends.'}`
               : isTrialExpired
               ? 'Choose a plan below to restore access to all features.'
-              : `You're on the ${currentPlan} plan. ${currentPlanIndex < 3 ? 'Upgrade to unlock more features.' : 'You have access to all features!'}`
+              : isPaidPlanActive
+              ? `Your subscription renews in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}. ${currentPlanIndex < 4 ? 'Upgrade to unlock more features.' : 'You have access to all features!'}`
+              : `You're on the ${currentPlan} plan. ${currentPlanIndex < 4 ? 'Upgrade to unlock more features.' : 'You have access to all features!'}`
             }
           </p>
         </div>
@@ -254,13 +283,16 @@ export default function Billing({ onUpdate }: { onUpdate?: (user: any) => void }
                 ))}
               </ul>
               <button
-                disabled={loading || isCurrentPlan}
-                onClick={() => handleSubscribe(plan.key)}
+                disabled={loading || isCurrentPlan || isLower}
+                onClick={() => {
+                  if (isCurrentPlan || isLower) return;
+                  handleSubscribe(plan.key);
+                }}
                 className={`w-full py-3 rounded-xl font-bold transition-all ${
                   isCurrentPlan
                     ? "bg-emerald-50 text-emerald-600 cursor-default border border-emerald-200"
                     : isLower
-                    ? "bg-slate-100 text-slate-500 cursor-not-allowed"
+                    ? "bg-slate-100 text-slate-500 cursor-not-allowed pointer-events-none select-none"
                     : plan.buttonColor
                 } disabled:opacity-50`}
               >

@@ -45,6 +45,26 @@ const uploadMiddleware = multer({
 
 const router = express.Router();
 
+// Get current shop's subscription status (used by frontend to detect expiry)
+router.get("/me", authenticateToken, async (req: any, res) => {
+  const shop = await Shop.findById(req.user.id);
+  if (!shop) return res.status(404).json({ error: "Shop not found" });
+
+  res.json({
+    id: shop._id,
+    name: shop.name,
+    email: shop.email,
+    ownerName: shop.owner_name,
+    phone: shop.phone,
+    address: shop.address,
+    plan: shop.subscription_plan,
+    expiresAt: shop.subscription_expires_at,
+    logoUrl: shop.logo_url,
+    subscriptionExpired: req.subscriptionExpired || false,
+    previousPlan: req.previousPlan || null,
+  });
+});
+
 router.patch("/profile", authenticateToken, async (req: any, res) => {
   const { name, ownerName, phone, address, logoUrl } = req.body;
   const shop = await Shop.findByIdAndUpdate(req.user.id, {

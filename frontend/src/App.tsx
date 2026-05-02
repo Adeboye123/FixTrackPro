@@ -46,7 +46,7 @@ export default function App() {
         <Route path="/register" element={!user ? <Register /> : <Navigate to={user?.role === "admin" ? "/admin" : "/"} />} />
         <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to={user?.role === "admin" ? "/admin" : "/"} />} />
         
-        <Route element={user ? <Layout user={user} onLogout={() => { localStorage.clear(); setUser(null); }} /> : <Navigate to="/login" />}>
+        <Route element={user ? <Layout user={user} onLogout={() => { localStorage.clear(); setUser(null); }} onUpdate={setUser} /> : <Navigate to="/login" />}>
           <Route path="/" element={user?.role === "admin" ? <Navigate to="/admin" /> : <Dashboard user={user} />} />
           <Route path="/repairs" element={<Repairs />} />
           <Route path="/inventory" element={<Inventory />} />

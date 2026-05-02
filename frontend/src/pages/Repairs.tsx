@@ -133,6 +133,13 @@ export default function Repairs() {
     setPrintType(type);
   };
 
+  // Helper: resolve logo URL to absolute URL for print windows
+  const getAbsoluteLogoUrl = () => {
+    if (!user.logoUrl) return '';
+    if (user.logoUrl.startsWith('http') || user.logoUrl.startsWith('data:')) return user.logoUrl;
+    return `${window.location.origin}${user.logoUrl}`;
+  };
+
   const handlePrint = () => {
     const printContent = printRef.current;
     if (!printContent) return;
@@ -200,17 +207,69 @@ export default function Repairs() {
     `);
     printWindow.document.close();
 
-    // Wait a moment for images to load, then print
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 300);
+    // Wait for all images to load before printing
+    const images = printWindow.document.querySelectorAll('img');
+    if (images.length === 0) {
+      setTimeout(() => { printWindow.print(); printWindow.close(); }, 200);
+    } else {
+      let loaded = 0;
+      const totalImages = images.length;
+      const onAllLoaded = () => {
+        loaded++;
+        if (loaded >= totalImages) {
+          setTimeout(() => { printWindow.print(); printWindow.close(); }, 100);
+        }
+      };
+      images.forEach(img => {
+        if (img.complete) {
+          onAllLoaded();
+        } else {
+          img.addEventListener('load', onAllLoaded);
+          img.addEventListener('error', onAllLoaded);
+        }
+      });
+      // Fallback: print after 3 seconds even if images fail
+      setTimeout(() => {
+        if (loaded < totalImages) {
+          printWindow.print();
+          printWindow.close();
+        }
+      }, 3000);
+    }
   };
 
-  const handleDownloadPDF = () => {
+  // Helper: load logo as data URL for PDF embedding
+  const loadLogoAsDataUrl = (): Promise<string | null> => {
+    const logoUrl = getAbsoluteLogoUrl();
+    if (!logoUrl) return Promise.resolve(null);
+    if (logoUrl.startsWith('data:')) return Promise.resolve(logoUrl);
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL('image/png'));
+        } catch {
+          resolve(null);
+        }
+      };
+      img.onerror = () => resolve(null);
+      img.src = logoUrl;
+    });
+  };
+
+  const handleDownloadPDF = async () => {
     if (!printRepair) return;
     const r = printRepair;
     const isReceipt = printType === 'receipt';
+
+    // Load logo as data URL for embedding
+    const logoDataUrl = await loadLogoAsDataUrl();
 
     const pdf = new jsPDF({
       orientation: isReceipt ? "portrait" : "landscape",
@@ -221,6 +280,16 @@ export default function Repairs() {
     const w = pdf.internal.pageSize.getWidth();
     let y = 8;
     const leftMargin = 4;
+
+    // Add logo to PDF if available
+    if (logoDataUrl) {
+      try {
+        pdf.addImage(logoDataUrl, 'PNG', w / 2 - 8, y, 16, 16);
+        y += 18;
+      } catch {
+        // Skip logo if addImage fails
+      }
+    }
 
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(14);
@@ -257,9 +326,11 @@ export default function Repairs() {
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(8);
     pdf.setTextColor(100);
-    pdf.text("Date:", leftMargin, y);
+    // Receipt shows print date; Jobcard shows registration date
+    const displayDate = isReceipt ? new Date() : new Date(r.created_at);
+    pdf.text(isReceipt ? "Print Date:" : "Date Registered:", leftMargin, y);
     pdf.setTextColor(0);
-    pdf.text(format(new Date(r.created_at), "dd/MM/yyyy HH:mm"), w - leftMargin, y, { align: "right" });
+    pdf.text(format(displayDate, "dd/MM/yyyy HH:mm"), w - leftMargin, y, { align: "right" });
     y += 5;
 
     pdf.setLineDashPattern([1, 1], 0);
@@ -366,10 +437,12 @@ export default function Repairs() {
   });
 
   // ────── Receipt Template (thermal 80mm) ──────
-  const ReceiptTemplate = ({ repair }: { repair: any }) => (
+  const ReceiptTemplate = ({ repair }: { repair: any }) => {
+    const absoluteLogo = getAbsoluteLogoUrl();
+    return (
     <div className="receipt-container">
       <div className="shop-header">
-        {user.logoUrl && <img src={user.logoUrl} alt="Logo" className="shop-logo" />}
+        {absoluteLogo && <img src={absoluteLogo} alt="Logo" className="shop-logo" />}
         <div className="shop-name">{user.name || "FixTrack Pro"}</div>
         <div className="shop-subtitle">Repair Receipt</div>
         {user.address && <div className="shop-contact">{user.address}</div>}
@@ -378,7 +451,8 @@ export default function Repairs() {
 
       <div className="section">
         <div className="row"><span className="label">Job ID:</span><span className="value" style={{ fontFamily: "'Courier New', monospace", fontWeight: 900, color: '#6366f1' }}>{repair.job_id}</span></div>
-        <div className="row"><span className="label">Date:</span><span className="value">{format(new Date(repair.created_at), "dd/MM/yyyy HH:mm")}</span></div>
+        <div className="row"><span className="label">Print Date:</span><span className="value">{format(new Date(), "dd/MM/yyyy HH:mm")}</span></div>
+        <div className="row"><span className="label">Registered:</span><span className="value" style={{ fontSize: '9px', color: '#94a3b8' }}>{format(new Date(repair.created_at), "dd/MM/yyyy HH:mm")}</span></div>
         <div className="row"><span className="label">Status:</span><span className="value">{repair.status}</span></div>
       </div>
 
@@ -417,14 +491,17 @@ export default function Repairs() {
         <p style={{ marginTop: '4px', fontWeight: 700 }}>Powered by FixTrack Pro</p>
       </div>
     </div>
-  );
+    );
+  };
 
   // ────── Label/Jobcard Template (A5‐ish) ──────
-  const LabelTemplate = ({ repair }: { repair: any }) => (
+  const LabelTemplate = ({ repair }: { repair: any }) => {
+    const absoluteLogo = getAbsoluteLogoUrl();
+    return (
     <div className="label-container">
       <div className="label-header">
         <div className="label-header-left">
-          {user.logoUrl && <img src={user.logoUrl} alt="Logo" className="label-logo" />}
+          {absoluteLogo && <img src={absoluteLogo} alt="Logo" className="label-logo" />}
           <div>
             <div className="label-shop-name">{user.name || "FixTrack Pro"}</div>
             <div className="label-shop-sub">Device Check-In Jobcard</div>
@@ -437,7 +514,7 @@ export default function Repairs() {
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8px', color: '#64748b', marginTop: '4px' }}>
-        <span>Date: {format(new Date(repair.created_at), "dd/MM/yyyy HH:mm")}</span>
+        <span>Date Registered: {format(new Date(repair.created_at), "dd/MM/yyyy HH:mm")}</span>
         {user.address && <span>{user.address}</span>}
         {user.phone && <span>Tel: {user.phone}</span>}
       </div>
@@ -484,7 +561,8 @@ export default function Repairs() {
         </div>
       </div>
     </div>
-  );
+    );
+  };
 
   if (loading) return <RepairsSkeleton />;
 

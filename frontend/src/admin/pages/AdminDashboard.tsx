@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { api } from "../../services/api";
-import { Users, Wrench, Wallet, History, Store, ArrowRight } from "lucide-react";
+import { Users, Wrench, Wallet, History, Store, ArrowRight, ShieldAlert, ShieldCheck } from "lucide-react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { AdminDashboardSkeleton } from "../components/AdminSkeleton";
@@ -8,10 +8,12 @@ import { AdminDashboardSkeleton } from "../components/AdminSkeleton";
 export default function AdminDashboard() {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [failedAttempts, setFailedAttempts] = useState(0);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchStats();
+    fetchSecurityAlert();
   }, []);
 
   const fetchStats = async () => {
@@ -25,10 +27,45 @@ export default function AdminDashboard() {
     }
   };
 
+  const fetchSecurityAlert = async () => {
+    try {
+      const data = await api.admin.getSecurityLogs();
+      setFailedAttempts(data.recentFailedAttempts || 0);
+    } catch {
+      // Non-critical, ignore
+    }
+  };
+
   if (loading) return <AdminDashboardSkeleton />;
 
   return (
     <div className="space-y-8">
+      {/* Security Alert Banner */}
+      {failedAttempts > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-5 flex items-center gap-4 animate-in fade-in duration-300">
+          <div className="p-3 bg-red-100 rounded-xl shrink-0">
+            <ShieldAlert className="w-6 h-6 text-red-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-bold text-red-900">Security Alert — {failedAttempts} failed login attempt{failedAttempts > 1 ? 's' : ''} in the last 24 hours</h3>
+            <p className="text-xs text-red-700 mt-0.5">Someone tried to access your admin dashboard with an incorrect password. Review your security logs for details.</p>
+          </div>
+          <button
+            onClick={() => navigate('/admin/settings')}
+            className="shrink-0 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl transition-colors shadow-sm"
+          >
+            View Logs
+          </button>
+        </div>
+      )}
+
+      {failedAttempts === 0 && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center gap-3">
+          <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+          <p className="text-xs font-medium text-emerald-700">No suspicious login activity in the last 24 hours. Your dashboard is secure.</p>
+        </div>
+      )}
+
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Platform Overview</h1>
         <p className="text-slate-500 mt-1">Real-time metrics and activity across all FixTrack shops.</p>

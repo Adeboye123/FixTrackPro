@@ -1,5 +1,5 @@
 import express from "express";
-import { Shop, Repair, Subscription, PlatformSettings } from "../models/index.js";
+import { Shop, Repair, Subscription, PlatformSettings, AdminLoginLog } from "../models/index.js";
 import { authenticateToken } from "../middleware/auth.js";
 import dotenv from "dotenv";
 
@@ -153,6 +153,24 @@ router.post("/sync-paystack", authenticateToken, async (req: any, res) => {
     failed,
     totalPending: pendingSubs.length,
   });
+});
+
+// ---- Security Logs ----
+router.get("/security-logs", authenticateToken, async (req: any, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: "Unauthorized" });
+  
+  const logs = await AdminLoginLog.find()
+    .sort({ created_at: -1 })
+    .limit(50);
+  
+  // Count failed attempts in last 24 hours
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const recentFailedCount = await AdminLoginLog.countDocuments({
+    success: false,
+    created_at: { $gte: twentyFourHoursAgo }
+  });
+  
+  res.json({ logs, recentFailedAttempts: recentFailedCount });
 });
 
 export default router;

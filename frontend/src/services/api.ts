@@ -1,4 +1,4 @@
-const API_URL = '/api';
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 const getHeaders = () => {
     const token = localStorage.getItem('token');
@@ -87,6 +87,10 @@ export const api = {
         }
     },
     shop: {
+        getMe: async () => {
+            const res = await fetch(`${API_URL}/shop/me`, { headers: getHeaders() });
+            return handleResponse(res);
+        },
         updateProfile: async (data: any) => {
             const res = await fetch(`${API_URL}/shop/profile`, {
                 method: 'PATCH',
@@ -216,6 +220,10 @@ export const api = {
         },
         getPricing: async () => {
             const res = await fetch(`${API_URL}/admin/pricing`);
+            return handleResponse(res);
+        },
+        getSecurityLogs: async () => {
+            const res = await fetch(`${API_URL}/admin/security-logs`, { headers: getHeaders() });
             return handleResponse(res);
         }
     }

@@ -7,7 +7,7 @@ import { requireFeature } from "../middleware/planMiddleware.js";
 const router = express.Router();
 
 router.get("/", authenticateToken, requireFeature('inventory'), async (req: any, res) => {
-  const items = await Inventory.find({ shop_id: req.user.id });
+  const items = await Inventory.find({ shop_id: req.user.id }).lean();
   res.json(items);
 });
 

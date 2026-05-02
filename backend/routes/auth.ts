@@ -1,12 +1,21 @@
 import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { Shop, Admin } from "../models/index.js";
+import { Shop, Admin, AdminLoginLog } from "../models/index.js";
 import { sendEmail } from "../services/email.js";
-import { otpEmailHtml } from "../services/emailTemplates.js";
+import { otpEmailHtml, adminLoginAlertHtml } from "../services/emailTemplates.js";
+import { rateLimiter, resetRateLimit } from "../middleware/rateLimiter.js";
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || "default_secret";
+
+// Rate limiter for admin login: 5 attempts per 15 minutes, block for 30 minutes
+const adminLoginLimiter = rateLimiter({
+  windowMs: 15 * 60 * 1000,
+  maxAttempts: 5,
+  blockDurationMs: 30 * 60 * 1000,
+  keyPrefix: 'admin-login'
+});
 
 router.post("/register", async (req, res) => {
   const { shopName, ownerName, email: rawEmail, phone, password, bankName, accountNumber, accountName } = req.body;
@@ -38,20 +47,80 @@ router.post("/register", async (req, res) => {
   }
 });
 
-router.post("/login", async (req, res) => {
+router.post("/login", adminLoginLimiter, async (req: any, res) => {
   const { email: rawEmail, password } = req.body;
   const email = rawEmail?.toLowerCase().trim();
+  const ip = req.ip || req.headers['x-forwarded-for'] || req.connection?.remoteAddress || 'unknown';
+  const userAgent = req.headers['user-agent'] || 'unknown';
   
   const admin = await Admin.findOne({ email });
   if (admin) {
     const validPassword = await bcrypt.compare(password, admin.password);
+    
     if (validPassword) {
+      // Log successful admin login
+      await new AdminLoginLog({
+        admin_id: admin._id,
+        email: admin.email,
+        ip,
+        user_agent: userAgent,
+        success: true
+      }).save();
+
+      // Reset rate limiter on success
+      resetRateLimit(ip, 'admin-login');
+
+      // Send login alert email
+      try {
+        const now = new Date();
+        await sendEmail(
+          admin.email,
+          "🔐 FixTrack Pro Admin - New Login Detected",
+          `A successful login to your Admin Dashboard was detected.\n\nTime: ${now.toLocaleString()}\nIP: ${ip}\nBrowser: ${userAgent}\n\nIf this wasn't you, change your password immediately!`,
+          adminLoginAlertHtml({
+            time: now.toLocaleString('en-NG', { dateStyle: 'full', timeStyle: 'short' }),
+            ip,
+            userAgent,
+            success: true
+          })
+        );
+      } catch (emailErr) {
+        console.error("Failed to send admin login alert email:", emailErr);
+      }
+
       const token = jwt.sign(
         { id: admin._id.toString(), email: admin.email, name: admin.name, role: 'admin' },
         JWT_SECRET,
         { expiresIn: '2h' }
       );
       return res.json({ token, user: { id: admin._id.toString(), email: admin.email, name: admin.name, role: 'admin' } });
+    } else {
+      // Log failed admin login attempt
+      await new AdminLoginLog({
+        admin_id: admin._id,
+        email: admin.email,
+        ip,
+        user_agent: userAgent,
+        success: false,
+        failure_reason: 'Invalid password'
+      }).save();
+
+      // Send alert on failed attempt
+      try {
+        await sendEmail(
+          admin.email,
+          "⚠️ FixTrack Pro Admin - Failed Login Attempt",
+          `A failed login attempt to your Admin Dashboard was detected.\n\nTime: ${new Date().toLocaleString()}\nIP: ${ip}\nBrowser: ${userAgent}\n\nIf this wasn't you, your account may be under attack. Consider changing your password.`,
+          adminLoginAlertHtml({
+            time: new Date().toLocaleString('en-NG', { dateStyle: 'full', timeStyle: 'short' }),
+            ip,
+            userAgent,
+            success: false
+          })
+        );
+      } catch (emailErr) {
+        console.error("Failed to send admin login alert email:", emailErr);
+      }
     }
   }
 

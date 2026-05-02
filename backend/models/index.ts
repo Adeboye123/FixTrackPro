@@ -20,7 +20,7 @@ const ShopSchema = new mongoose.Schema({
   email: { type: String, unique: true, required: true },
   phone: { type: String, required: true },
   password: { type: String, required: true },
-  subscription_plan: { type: String, default: 'Trial', enum: ['Trial', 'Basic', 'Pro', 'Premium'] },
+  subscription_plan: { type: String, default: 'Trial', enum: ['Trial', 'Free', 'Basic', 'Pro', 'Premium'] },
   subscription_expires_at: { type: Date },
   bank_details: {
     bank_name: { type: String },
@@ -43,7 +43,7 @@ const AdminSchema = new mongoose.Schema({
 }, schemaOptions);
 
 const StaffSchema = new mongoose.Schema({
-  shop_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Shop', required: true },
+  shop_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Shop', required: true, index: true },
   name: { type: String, required: true },
   role: { type: String, required: true },
   email: { type: String },
@@ -53,7 +53,7 @@ const StaffSchema = new mongoose.Schema({
 }, schemaOptions);
 
 const RepairSchema = new mongoose.Schema({
-  shop_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Shop', required: true },
+  shop_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Shop', required: true, index: true },
   job_id: { type: String, unique: true, required: true },
   customer_name: { type: String, required: true },
   customer_phone: { type: String, required: true },
@@ -66,7 +66,7 @@ const RepairSchema = new mongoose.Schema({
   amount_paid: { type: Number, default: 0 },
   payment_status: { type: String, default: 'Unpaid' },
   status: { type: String, default: 'Received' },
-  technician_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff' },
+  technician_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff', index: true },
   notes: { type: String },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now }
@@ -80,7 +80,7 @@ const RepairLogSchema = new mongoose.Schema({
 }, schemaOptions);
 
 const InventorySchema = new mongoose.Schema({
-  shop_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Shop', required: true },
+  shop_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Shop', required: true, index: true },
   name: { type: String, required: true },
   category: { type: String },
   quantity: { type: Number, default: 0 },
@@ -105,6 +105,16 @@ const PlatformSettingsSchema = new mongoose.Schema({
   updated_at: { type: Date, default: Date.now }
 }, schemaOptions);
 
+const AdminLoginLogSchema = new mongoose.Schema({
+  admin_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
+  email: { type: String, required: true },
+  ip: { type: String, default: 'unknown' },
+  user_agent: { type: String, default: 'unknown' },
+  success: { type: Boolean, required: true },
+  failure_reason: { type: String },
+  created_at: { type: Date, default: Date.now }
+}, schemaOptions);
+
 export const Shop = mongoose.model("Shop", ShopSchema);
 export const Admin = mongoose.model("Admin", AdminSchema);
 export const Staff = mongoose.model("Staff", StaffSchema);
@@ -113,4 +123,5 @@ export const RepairLog = mongoose.model("RepairLog", RepairLogSchema);
 export const Inventory = mongoose.model("Inventory", InventorySchema);
 export const Subscription = mongoose.model("Subscription", SubscriptionSchema);
 export const PlatformSettings = mongoose.model("PlatformSettings", PlatformSettingsSchema);
+export const AdminLoginLog = mongoose.model("AdminLoginLog", AdminLoginLogSchema);
 

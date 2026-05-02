@@ -184,3 +184,123 @@ export function repairNotificationHtml(options: {
     footerNote: 'Please keep your Job ID for reference when picking up your device.',
   });
 }
+
+export function adminLoginAlertHtml(options: {
+  time: string;
+  ip: string;
+  userAgent: string;
+  success: boolean;
+}): string {
+  const { time, ip, userAgent, success } = options;
+  
+  const statusBg = success ? '#ecfdf5' : '#fef2f2';
+  const statusBorder = success ? '#a7f3d0' : '#fecaca';
+  const statusColor = success ? '#065f46' : '#991b1b';
+  const statusIcon = success ? '✅' : '⚠️';
+  const statusText = success ? 'Successful Login' : 'Failed Login Attempt';
+
+  return buildEmailTemplate({
+    subject: success ? 'Admin Login Alert' : 'Admin Security Alert',
+    body: `
+      <div style="background:${statusBg}; border:1px solid ${statusBorder}; border-radius:12px; padding:16px 20px; margin:0 0 20px;">
+        <p style="margin:0; font-size:15px; font-weight:700; color:${statusColor};">
+          ${statusIcon} ${statusText}
+        </p>
+        <p style="margin:6px 0 0; font-size:13px; color:${statusColor};">
+          ${success 
+            ? 'A successful login to your FixTrack Pro Admin Dashboard was just detected.'
+            : 'Someone attempted to log into your Admin Dashboard with an incorrect password.'
+          }
+        </p>
+      </div>
+
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0; margin:16px 0;">
+        <tr>
+          <td style="padding:12px 20px; border-bottom:1px solid #e2e8f0;">
+            <p style="margin:0; font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:1px;">Time</p>
+            <p style="margin:4px 0 0; font-size:14px; font-weight:600; color:#1e293b;">${time}</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:12px 20px; border-bottom:1px solid #e2e8f0;">
+            <p style="margin:0; font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:1px;">IP Address</p>
+            <p style="margin:4px 0 0; font-size:14px; font-weight:600; color:#1e293b; font-family:'Courier New',monospace;">${ip}</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:12px 20px;">
+            <p style="margin:0; font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:1px;">Browser / Device</p>
+            <p style="margin:4px 0 0; font-size:12px; font-weight:500; color:#64748b; word-break:break-all;">${userAgent}</p>
+          </td>
+        </tr>
+      </table>
+
+      ${!success ? `
+      <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:14px 16px; margin:16px 0;">
+        <p style="margin:0; font-size:13px; color:#92400e; font-weight:600;">
+          🛡️ <strong>Security Tip:</strong> If this wasn't you, consider changing your admin password immediately. Multiple failed attempts will trigger an automatic lockout.
+        </p>
+      </div>` : `
+      <p style="margin:16px 0 0; font-size:13px; color:#64748b; line-height:1.6;">
+        If this was you, no action is needed. If you didn't initiate this login, please change your password immediately and review your security settings.
+      </p>`}
+    `,
+    footerNote: 'This is an automated security notification from FixTrack Pro. You receive this because you are a platform administrator.',
+  });
+}
+
+export function subscriptionExpiredHtml(options: {
+  ownerName: string;
+  previousPlan: string;
+  shopName: string;
+}): string {
+  const { ownerName, previousPlan, shopName } = options;
+
+  return buildEmailTemplate({
+    recipientName: ownerName,
+    subject: 'Your Subscription Has Expired',
+    body: `
+      <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:12px; padding:16px 20px; margin:0 0 20px;">
+        <p style="margin:0; font-size:15px; font-weight:700; color:#991b1b;">
+          ⚠️ Subscription Expired
+        </p>
+        <p style="margin:6px 0 0; font-size:13px; color:#991b1b;">
+          Your <strong>${previousPlan}</strong> plan for <strong>${shopName}</strong> has expired and your account has been moved to the Trial plan.
+        </p>
+      </div>
+
+      <p style="margin:0 0 16px; font-size:14px; color:#475569; line-height:1.6;">
+        Some features may now be limited. To restore full access to all the features you were enjoying, please log in and subscribe to a new plan.
+      </p>
+
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0; margin:16px 0;">
+        <tr>
+          <td style="padding:12px 20px; border-bottom:1px solid #e2e8f0;">
+            <p style="margin:0; font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:1px;">Previous Plan</p>
+            <p style="margin:4px 0 0; font-size:14px; font-weight:600; color:#1e293b;">${previousPlan}</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:12px 20px; border-bottom:1px solid #e2e8f0;">
+            <p style="margin:0; font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:1px;">Current Plan</p>
+            <p style="margin:4px 0 0; font-size:14px; font-weight:600; color:#dc2626;">Trial (Limited Features)</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:12px 20px;">
+            <p style="margin:0; font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:1px;">Action Required</p>
+            <p style="margin:4px 0 0; font-size:14px; font-weight:600; color:#4f46e5;">Subscribe to a new plan to restore access</p>
+          </td>
+        </tr>
+      </table>
+
+      <div style="text-align:center; margin:24px 0 8px;">
+        <p style="margin:0; font-size:13px; color:#64748b; line-height:1.6;">
+          Log in to your FixTrack Pro dashboard and visit the <strong>Billing</strong> page to choose a new plan.
+        </p>
+      </div>
+    `,
+    shopName: 'FixTrack Pro',
+    footerNote: 'This is an automated subscription notification. You received this because your subscription plan has expired.',
+  });
+}

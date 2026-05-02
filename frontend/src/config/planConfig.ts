@@ -1,7 +1,7 @@
 // Canonical plan configuration for FixTrack Pro
 // Used by both frontend (feature display, gating UI) and conceptually by backend (limits)
 
-export type PlanKey = 'Trial' | 'Basic' | 'Pro' | 'Premium';
+export type PlanKey = 'Trial' | 'Free' | 'Basic' | 'Pro' | 'Premium';
 
 export interface PlanTier {
   id: string;
@@ -19,6 +19,7 @@ export interface PlanTier {
     advancedAnalytics: boolean;
     exportReports: boolean;
     staffPerformance: boolean;
+    editStaffRanking: boolean;
     customBranding: boolean;
     prioritySupport: boolean;
   };
@@ -42,6 +43,7 @@ export const PLAN_TIERS: Record<PlanKey, PlanTier> = {
       advancedAnalytics: true,
       exportReports: true,
       staffPerformance: true,
+      editStaffRanking: true,
       customBranding: true,
       prioritySupport: true,
     },
@@ -50,6 +52,33 @@ export const PLAN_TIERS: Record<PlanKey, PlanTier> = {
       'Unlimited repairs',
       'Unlimited staff',
       'Full access to everything',
+    ],
+  },
+  Free: {
+    id: 'free',
+    name: 'Free',
+    price: 0,
+    durationLabel: 'Limited',
+    maxRepairsPerMonth: 10,
+    maxStaff: 1,
+    features: {
+      inventory: false,
+      receiptPrinting: false,
+      deviceLabels: false,
+      emailNotifications: false,
+      smsNotifications: false,
+      advancedAnalytics: false,
+      exportReports: false,
+      staffPerformance: false,
+      editStaffRanking: false,
+      customBranding: false,
+      prioritySupport: false,
+    },
+    featureList: [
+      'Up to 10 repairs/month',
+      '1 staff member',
+      'Basic repair tracking only',
+      'Subscribe to unlock more',
     ],
   },
   Basic: {
@@ -68,6 +97,7 @@ export const PLAN_TIERS: Record<PlanKey, PlanTier> = {
       advancedAnalytics: false,
       exportReports: false,
       staffPerformance: false,
+      editStaffRanking: false,
       customBranding: false,
       prioritySupport: false,
     },
@@ -96,6 +126,7 @@ export const PLAN_TIERS: Record<PlanKey, PlanTier> = {
       advancedAnalytics: true,
       exportReports: false,
       staffPerformance: true,
+      editStaffRanking: false,
       customBranding: false,
       prioritySupport: false,
     },
@@ -125,6 +156,7 @@ export const PLAN_TIERS: Record<PlanKey, PlanTier> = {
       advancedAnalytics: true,
       exportReports: true,
       staffPerformance: true,
+      editStaffRanking: true,
       customBranding: true,
       prioritySupport: true,
     },
@@ -132,6 +164,7 @@ export const PLAN_TIERS: Record<PlanKey, PlanTier> = {
       'Unlimited repairs',
       'Unlimited staff',
       'Everything in Pro',
+      'Edit staff rankings',
       'Export reports (CSV)',
       'Custom branding (logo on receipts)',
       'Priority support',
@@ -142,7 +175,7 @@ export const PLAN_TIERS: Record<PlanKey, PlanTier> = {
 // Helper: get the plan tier for a given plan name
 export function getPlanTier(planName: string): PlanTier {
   const key = planName as PlanKey;
-  return PLAN_TIERS[key] || PLAN_TIERS.Trial;
+  return PLAN_TIERS[key] || PLAN_TIERS.Free;
 }
 
 // Helper: check if a feature is available on a given plan
@@ -153,7 +186,7 @@ export function hasFeature(planName: string, feature: keyof PlanTier['features']
 
 // Helper: get the minimum plan required for a feature
 export function getMinPlanForFeature(feature: keyof PlanTier['features']): string {
-  const order: PlanKey[] = ['Trial', 'Basic', 'Pro', 'Premium'];
+  const order: PlanKey[] = ['Trial', 'Free', 'Basic', 'Pro', 'Premium'];
   for (const key of order) {
     if (PLAN_TIERS[key].features[feature]) return key;
   }

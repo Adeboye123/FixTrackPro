@@ -16,7 +16,22 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-app.use(cors());
+// CORS: allow Vercel frontend in production, open in dev
+const allowedOrigins = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(',').map(o => o.trim())
+  : [];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, server-to-server)
+    if (!origin) return callback(null, true);
+    // In dev (no FRONTEND_URL set), allow all origins
+    if (allowedOrigins.length === 0) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true
+}));
 app.use(morgan("dev"));
 app.use(express.json());
 
