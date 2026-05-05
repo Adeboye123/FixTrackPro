@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "tsx backend/server.ts",
-    "build": "vite build frontend",
+    "build": "vite build frontend --outDir ../dist --emptyOutDir",
     "preview": "vite preview",
-    "clean": "rm -rf frontend/dist",
+    "clean": "rm -rf dist",
     "lint": "tsc --noEmit"
   },
   "dependencies": {

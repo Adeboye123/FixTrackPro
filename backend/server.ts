@@ -59,7 +59,7 @@ async function startServer() {
 
   // In split deployment (Vercel + Render), the frontend is served by Vercel.
   // Only serve frontend files if they exist (for local production testing).
-  const distPath = path.join(__dirname, "../frontend/dist");
+  const distPath = path.join(__dirname, "../dist");
   if (process.env.NODE_ENV === "production" && fs.existsSync(distPath)) {
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
