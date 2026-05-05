@@ -5,7 +5,7 @@ import { authenticateToken } from "../middleware/auth.js";
 import { checkRepairLimit, requireFeature } from "../middleware/planMiddleware.js";
 import { sendEmail } from "../services/email.js";
 import { repairNotificationHtml } from "../services/emailTemplates.js";
-import { sendSMS } from "../services/sms.js";
+import { sendSMS, isSMSConfigured } from "../services/sms.js";
 
 const router = express.Router();
 
@@ -140,12 +140,21 @@ router.post("/:id/notify", authenticateToken, async (req: any, res) => {
       return res.status(403).json({ error: 'SMS notifications require Pro plan or higher.', code: 'PLAN_FEATURE_LOCKED', feature: 'smsNotifications', currentPlan: plan2, requiredPlan: 'Pro' });
     }
     try {
-      await sendSMS(
-        repair.customer_phone, 
-        `${shop2?.name || 'FixTrack Pro'} Update: Hello ${repair.customer_name}, your ${repair.device_model} repair status is now: ${repair.status}. Thank you for choosing us! Job ID: ${repair.job_id}`
-      );
+      const notificationMessage = `${shop2?.name || 'FixTrack Pro'} Update: Hello ${repair.customer_name}, your ${repair.device_model} repair status is now: ${repair.status}. Thank you for choosing us! Job ID: ${repair.job_id}`;
+      const result = await sendSMS(repair.customer_phone, notificationMessage);
+      
+      if (result && result.method === 'whatsapp_link') {
+        // SMS not configured — return WhatsApp link for the frontend to open
+        return res.json({ 
+          message: "WhatsApp message ready to send",
+          method: 'whatsapp',
+          whatsappLink: result.whatsappLink
+        });
+      }
+      
+      return res.json({ message: "SMS notification sent", method: 'sms' });
     } catch(err) {
-       return res.status(500).json({ error: "Failed to send SMS." });
+       return res.status(500).json({ error: "Failed to send notification." });
     }
   }
 

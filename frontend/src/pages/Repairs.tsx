@@ -418,8 +418,15 @@ export default function Repairs() {
       return;
     }
     try {
-      await api.repairs.notify(id, type);
-      success(`${type.toUpperCase()} notification sent!`);
+      const result = await api.repairs.notify(id, type);
+      
+      if (result.method === 'whatsapp') {
+        // SMS not configured — open WhatsApp with pre-filled message
+        window.open(result.whatsappLink, '_blank');
+        success('Opening WhatsApp with customer message...');
+      } else {
+        success(`${type.toUpperCase()} notification sent!`);
+      }
     } catch (err: any) {
       error(err.message || "Failed to send notification.");
     }
@@ -710,8 +717,8 @@ export default function Repairs() {
                       </button>
                       <button 
                         onClick={() => handleNotify(repair.id, 'sms')}
-                        className={`p-2 rounded-lg transition-colors ${canSMS ? 'text-slate-400 hover:text-amber-600 hover:bg-amber-50' : 'text-slate-300 cursor-pointer'}`}
-                        title={canSMS ? 'Send SMS' : `Requires ${getMinPlanForFeature('smsNotifications')}+ plan`}
+                        className={`p-2 rounded-lg transition-colors ${canSMS ? 'text-slate-400 hover:text-green-600 hover:bg-green-50' : 'text-slate-300 cursor-pointer'}`}
+                        title={canSMS ? 'Notify via WhatsApp' : `Requires ${getMinPlanForFeature('smsNotifications')}+ plan`}
                       >
                         {canSMS ? <MessageSquare className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
                       </button>

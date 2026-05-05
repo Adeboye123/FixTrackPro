@@ -3,11 +3,18 @@ import dotenv from "dotenv";
 dotenv.config();
 
 /**
- * Send SMS using Africa's Talking API
- * Free sandbox for testing, cheap production rates for Nigeria (~₦2-4/SMS)
+ * SMS / WhatsApp Notification Service for FixTrack Pro
  * 
- * Expects AT_USERNAME, AT_API_KEY, and AT_ENVIRONMENT to be set in .env
+ * Supports two modes:
+ * 1. **WhatsApp Link (FREE)** — Generates a wa.me deep link with pre-filled message.
+ *    The frontend opens this link, allowing the shop owner to send the message via WhatsApp.
+ *    Zero cost, works immediately, no API keys needed.
+ * 
+ * 2. **Africa's Talking API (PAID)** — Direct SMS delivery when API credentials are configured.
+ *    Expects AT_USERNAME, AT_API_KEY, and AT_ENVIRONMENT to be set in .env.
+ *    Free sandbox for testing, cheap production rates for Nigeria (~₦2-4/SMS).
  */
+
 const formatPhoneNumber = (phone: string) => {
   // Remove all non-numeric characters
   const cleaned = phone.replace(/\D/g, '');
@@ -30,15 +37,54 @@ const formatPhoneNumber = (phone: string) => {
   return phone;
 };
 
+// Strip the '+' for wa.me links (WhatsApp expects digits only)
+const formatForWhatsApp = (phone: string) => {
+  return formatPhoneNumber(phone).replace('+', '');
+};
+
+/**
+ * Generate a WhatsApp deep link with a pre-filled message.
+ * This is FREE and works immediately — the shop owner clicks the link
+ * and WhatsApp opens with the message ready to send.
+ */
+export const generateWhatsAppLink = (to: string, message: string) => {
+  const waNumber = formatForWhatsApp(to);
+  const encodedMessage = encodeURIComponent(message);
+  return `https://wa.me/${waNumber}?text=${encodedMessage}`;
+};
+
+/**
+ * Check if direct SMS sending is available (Africa's Talking credentials configured)
+ */
+export const isSMSConfigured = () => {
+  const username = process.env.AT_USERNAME;
+  const apiKey = process.env.AT_API_KEY;
+  const environment = process.env.AT_ENVIRONMENT || 'sandbox';
+  // Sandbox mode with default "sandbox" username doesn't deliver real SMS
+  if (environment === 'sandbox') return false;
+  return !!(username && apiKey);
+};
+
+/**
+ * Send SMS using Africa's Talking API (requires paid credentials)
+ * Falls back to generating a WhatsApp link if credentials aren't configured.
+ */
 export const sendSMS = async (to: string, message: string) => {
   const username = process.env.AT_USERNAME;
   const apiKey = process.env.AT_API_KEY;
   const environment = process.env.AT_ENVIRONMENT || 'sandbox';
   const senderId = process.env.AT_SENDER_ID || 'FixTrack';
 
-  if (!username || !apiKey) {
-    console.warn("Africa's Talking credentials not found. Simulating SMS:", { to, message });
-    return;
+  // If not in production mode or no credentials, return WhatsApp link as fallback
+  if (!username || !apiKey || environment === 'sandbox') {
+    const waLink = generateWhatsAppLink(to, message);
+    console.log("SMS not configured for production. WhatsApp fallback link generated:", waLink);
+    return { 
+      delivered: false, 
+      method: 'whatsapp_link', 
+      whatsappLink: waLink,
+      message: 'SMS credentials not configured. Use WhatsApp link to send message.'
+    };
   }
 
   const baseUrl = environment === 'production'
@@ -76,14 +122,24 @@ export const sendSMS = async (to: string, message: string) => {
       const recipient = recipients[0];
       if (recipient.statusCode === 101 || recipient.status === 'Success') {
         console.log(`SMS successfully sent to ${formattedPhone} (messageId: ${recipient.messageId})`);
+        return { delivered: true, method: 'sms', messageId: recipient.messageId };
       } else {
         console.warn(`SMS sent but status: ${recipient.status} (code: ${recipient.statusCode})`);
+        return { delivered: true, method: 'sms', status: recipient.status };
       }
     } else {
       console.log(`SMS request accepted: ${data.SMSMessageData?.Message}`);
+      return { delivered: true, method: 'sms' };
     }
   } catch (error) {
     console.error("Failed to send SMS:", error);
-    throw error;
+    // On SMS failure, fallback to WhatsApp link
+    const waLink = generateWhatsAppLink(to, message);
+    return { 
+      delivered: false, 
+      method: 'whatsapp_link', 
+      whatsappLink: waLink,
+      message: 'SMS delivery failed. Use WhatsApp link instead.'
+    };
   }
 };
