@@ -12,7 +12,7 @@ export default function Layout({ user, onLogout, onUpdate }: { user: any; onLogo
 
   useEffect(() => {
     const routeTitles: Record<string, string> = {
-      "/": "Dashboard",
+      "/dashboard": "Dashboard",
       "/repairs": "Repairs",
       "/inventory": "Inventory",
       "/staff": "Staff",
@@ -61,7 +61,7 @@ export default function Layout({ user, onLogout, onUpdate }: { user: any; onLogo
   return (
     <div className="flex h-screen bg-[#f8f9fa]">
       <Sidebar user={user} onLogout={onLogout} />
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto pt-16 lg:pt-0">
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}
@@ -69,7 +69,7 @@ export default function Layout({ user, onLogout, onUpdate }: { user: any; onLogo
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
-            className="p-8"
+            className="p-4 sm:p-6 lg:p-8"
           >
             <Outlet />
           </motion.div>

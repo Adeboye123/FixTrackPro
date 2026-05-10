@@ -10,9 +10,6 @@ export default function Register() {
     email: "",
     phone: "",
     password: "",
-    bankName: "",
-    accountNumber: "",
-    accountName: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -83,8 +80,8 @@ export default function Register() {
       </div>
 
       {/* Right Side - Register Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 md:p-16">
-        <div className="w-full max-w-lg bg-white p-8 lg:p-0 rounded-2xl shadow-xl shadow-slate-200/50 lg:shadow-none">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-4 sm:p-8 md:p-16 min-h-screen lg:min-h-0">
+        <div className="w-full max-w-lg bg-white p-6 sm:p-8 lg:p-0 rounded-2xl shadow-xl shadow-slate-200/50 lg:shadow-none">
           {/* Mobile Logo */}
           <div className="flex items-center gap-2 mb-12 lg:hidden">
             <div className="w-8 h-8 bg-[#5546e4] rounded-lg flex items-center justify-center">
@@ -147,55 +144,7 @@ export default function Register() {
               />
             </div>
 
-            <div className="pt-4 border-t border-slate-100 mt-6">
-              <h3 className="text-xs font-black text-indigo-600 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <Store className="w-4 h-4" /> Bank Details (For 7-Day Trial)
-              </h3>
-              <div className="space-y-5">
-                <div>
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">
-                    BANK NAME
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-300"
-                    placeholder="e.g. GTBank, Access Bank"
-                    value={formData.bankName}
-                    onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">
-                      ACCOUNT NUMBER
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-300 font-mono"
-                      placeholder="0123456789"
-                      maxLength={10}
-                      value={formData.accountNumber}
-                      onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value.replace(/\D/g, '') })}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">
-                      ACCOUNT NAME
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-300"
-                      placeholder="John Doe"
-                      value={formData.accountName}
-                      onChange={(e) => setFormData({ ...formData, accountName: e.target.value })}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
+
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-6">
               <div>

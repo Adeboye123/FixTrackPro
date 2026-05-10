@@ -22,6 +22,27 @@ router.get("/pricing", async (_req: any, res: any) => {
   });
 });
 
+// Public stats endpoint – used by the Landing Page for dynamic counters
+router.get("/public-stats", async (_req: any, res: any) => {
+  try {
+    const totalShops = await Shop.countDocuments();
+    const totalRepairs = await Repair.countDocuments();
+    const pricingSetting = await PlatformSettings.findOne({ key: "pricing" });
+    res.json({
+      totalShops,
+      totalRepairs,
+      pricing: pricingSetting?.value || DEFAULT_PRICING,
+    });
+  } catch (err) {
+    console.error("Failed to fetch public stats:", err);
+    res.json({
+      totalShops: 0,
+      totalRepairs: 0,
+      pricing: DEFAULT_PRICING,
+    });
+  }
+});
+
 router.get("/stats", authenticateToken, async (req: any, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ error: "Unauthorized" });
   

@@ -73,7 +73,7 @@ export default function Login({ onLogin }: { onLogin: (user: any) => void }) {
         localStorage.setItem("token", res.token);
         localStorage.setItem("user", JSON.stringify(res.user));
         onLogin(res.user);
-        navigate(res.user.role === "admin" ? "/admin" : "/");
+        navigate(res.user.role === "admin" ? "/admin" : "/dashboard");
       } else {
         const res = await api.auth.login({ email: email.toLowerCase().trim(), password });
         if (res.error) throw new Error(res.error);
@@ -85,7 +85,7 @@ export default function Login({ onLogin }: { onLogin: (user: any) => void }) {
           localStorage.setItem("token", res.token);
           localStorage.setItem("user", JSON.stringify(res.user));
           onLogin(res.user);
-          navigate(res.user.role === "admin" ? "/admin" : "/");
+          navigate(res.user.role === "admin" ? "/admin" : "/dashboard");
         }
       }
     } catch (err: any) {
@@ -140,8 +140,8 @@ export default function Login({ onLogin }: { onLogin: (user: any) => void }) {
       </div>
 
       {/* Right Side - Login Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 md:p-16">
-        <div className="w-full max-w-md bg-white p-8 lg:p-0 rounded-2xl shadow-xl shadow-slate-200/50 lg:shadow-none">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-4 sm:p-8 md:p-16 min-h-screen lg:min-h-0">
+        <div className="w-full max-w-md bg-white p-6 sm:p-8 lg:p-0 rounded-2xl shadow-xl shadow-slate-200/50 lg:shadow-none">
           {/* Mobile Logo */}
           <div className="flex items-center gap-2 mb-12 lg:hidden">
             <div className="w-8 h-8 bg-[#5546e4] rounded-lg flex items-center justify-center">

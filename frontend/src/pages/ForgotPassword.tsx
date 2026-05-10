@@ -48,8 +48,8 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-      <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl shadow-slate-200/50">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 sm:p-6">
+      <div className="w-full max-w-md bg-white p-6 sm:p-8 rounded-2xl shadow-xl shadow-slate-200/50">
         <div className="flex items-center gap-2 mb-12 justify-center">
           <div className="w-8 h-8 bg-[#5546e4] rounded-lg flex items-center justify-center">
             <Wrench className="w-5 h-5 text-white" />

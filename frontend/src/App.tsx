@@ -5,6 +5,7 @@
 
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { LandingPage } from "./landing";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -42,12 +43,15 @@ export default function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/login" element={!user ? <Login onLogin={setUser} /> : <Navigate to={user?.role === "admin" ? "/admin" : "/"} />} />
-        <Route path="/register" element={!user ? <Register /> : <Navigate to={user?.role === "admin" ? "/admin" : "/"} />} />
-        <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to={user?.role === "admin" ? "/admin" : "/"} />} />
+        {/* Public Landing Page */}
+        <Route path="/" element={user ? <Navigate to={user.role === "admin" ? "/admin" : "/dashboard"} /> : <LandingPage />} />
+
+        <Route path="/login" element={!user ? <Login onLogin={setUser} /> : <Navigate to={user?.role === "admin" ? "/admin" : "/dashboard"} />} />
+        <Route path="/register" element={!user ? <Register /> : <Navigate to={user?.role === "admin" ? "/admin" : "/dashboard"} />} />
+        <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to={user?.role === "admin" ? "/admin" : "/dashboard"} />} />
         
         <Route element={user ? <Layout user={user} onLogout={() => { localStorage.clear(); setUser(null); }} onUpdate={setUser} /> : <Navigate to="/login" />}>
-          <Route path="/" element={user?.role === "admin" ? <Navigate to="/admin" /> : <Dashboard user={user} />} />
+          <Route path="/dashboard" element={user?.role === "admin" ? <Navigate to="/admin" /> : <Dashboard user={user} />} />
           <Route path="/repairs" element={<Repairs />} />
           <Route path="/inventory" element={<Inventory />} />
           <Route path="/staff" element={<Staff />} />
@@ -66,10 +70,9 @@ export default function App() {
            <Route path="settings" element={<AdminSettings />} />
         </Route>
 
-        {/* Catch-all: redirect unknown routes to login */}
-        <Route path="*" element={<Navigate to={user ? (user.role === "admin" ? "/admin" : "/") : "/login"} />} />
+        {/* Catch-all: redirect unknown routes */}
+        <Route path="*" element={<Navigate to={user ? (user.role === "admin" ? "/admin" : "/dashboard") : "/"} />} />
       </Routes>
     </Router>
   );
 }
-

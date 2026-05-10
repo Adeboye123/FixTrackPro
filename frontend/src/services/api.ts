@@ -222,6 +222,10 @@ export const api = {
             const res = await fetch(`${API_URL}/admin/pricing`);
             return handleResponse(res);
         },
+        getPublicStats: async () => {
+            const res = await fetch(`${API_URL}/admin/public-stats`);
+            return handleResponse(res);
+        },
         getSecurityLogs: async () => {
             const res = await fetch(`${API_URL}/admin/security-logs`, { headers: getHeaders() });
             return handleResponse(res);

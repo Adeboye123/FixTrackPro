@@ -3,8 +3,8 @@ import React from "react";
 // Skeleton loading components for FixTrack Pro
 // Used across Dashboard, Repairs, Inventory, Staff, Billing
 
-export function SkeletonPulse({ className = "" }: { className?: string }) {
-  return <div className={`animate-pulse bg-slate-200 rounded-lg ${className}`} />;
+export function SkeletonPulse({ className = "", ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return <div className={`animate-pulse bg-slate-200 rounded-lg ${className}`} {...props} />;
 }
 
 // Dashboard skeleton
