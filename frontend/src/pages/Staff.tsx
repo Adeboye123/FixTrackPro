@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../services/api";
-import { Plus, User, Mail, Phone, X, TrendingUp, Award, Lock } from "lucide-react";
+import { Plus, User, Mail, Phone, X, TrendingUp, Award, Lock, Trash2, ChevronDown } from "lucide-react";
 import { useToast } from "../context/ToastContext";
 import { getPlanTier } from "../config/planConfig";
 import { StaffSkeleton } from "../components/Skeleton";
@@ -11,6 +11,7 @@ export default function Staff() {
   const [staff, setStaff] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [editingRankId, setEditingRankId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     role: "Technician",
@@ -24,6 +25,7 @@ export default function Staff() {
   const currentPlan = user?.plan || 'Trial';
   const planTier = getPlanTier(currentPlan);
   const staffLimit = planTier.maxStaff;
+  const canEditRanking = planTier.features.editStaffRanking;
 
   const handleAddStaffClick = () => {
     // Let any plan attempt — backend enforces the exact limit
@@ -58,6 +60,33 @@ export default function Staff() {
     }
   };
 
+  const handleRankChange = async (staffId: string, newRanking: string) => {
+    try {
+      await api.staff.updateRanking(staffId, newRanking);
+      success(`Ranking updated to ${newRanking}`);
+      setEditingRankId(null);
+      fetchStaff();
+    } catch (err: any) {
+      if (err.message?.includes('plan') || err.message?.includes('Upgrade') || err.message?.includes('PLAN_FEATURE_LOCKED')) {
+        error("Editing staff rankings requires a Premium plan.");
+        setTimeout(() => navigate('/billing'), 2000);
+      } else {
+        error(err.message || "Failed to update ranking.");
+      }
+    }
+  };
+
+  const handleDelete = async (staffId: string, staffName: string) => {
+    if (!window.confirm(`Remove ${staffName} from your team? This cannot be undone.`)) return;
+    try {
+      await api.staff.delete(staffId);
+      success(`${staffName} has been removed.`);
+      fetchStaff();
+    } catch (err: any) {
+      error(err.message || "Failed to remove staff member.");
+    }
+  };
+
   const getRankColor = (rank: string) => {
     switch (rank) {
       case 'Platinum': return 'bg-slate-900 text-white';
@@ -66,6 +95,8 @@ export default function Staff() {
       default: return 'bg-orange-100 text-orange-700';
     }
   };
+
+  const rankOptions = ['Bronze', 'Silver', 'Gold', 'Platinum'];
 
   if (loading) return <StaffSkeleton />;
 
@@ -89,10 +120,60 @@ export default function Staff() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {staff.map((member) => (
-          <div key={member.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow relative">
-            <div className={`absolute top-4 right-4 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${getRankColor(member.ranking)}`}>
-              {member.ranking}
+          <div key={member._id || member.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow relative group">
+            {/* Rank badge — clickable to edit if Premium */}
+            <div className="absolute top-4 right-4 z-10">
+              {editingRankId === (member._id || member.id) ? (
+                <div className="flex items-center gap-1 bg-white rounded-lg shadow-lg border border-slate-200 p-1">
+                  {rankOptions.map((rank) => (
+                    <button
+                      key={rank}
+                      onClick={() => handleRankChange(member._id || member.id, rank)}
+                      className={`px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-wider transition-all ${
+                        member.ranking === rank 
+                          ? getRankColor(rank) + ' ring-2 ring-indigo-500' 
+                          : 'hover:bg-slate-50 text-slate-500'
+                      }`}
+                    >
+                      {rank}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setEditingRankId(null)}
+                    className="p-1 text-slate-400 hover:text-slate-600"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => {
+                    if (canEditRanking) {
+                      setEditingRankId(member._id || member.id);
+                    } else {
+                      error("Editing staff rankings requires a Premium plan.");
+                    }
+                  }}
+                  className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${getRankColor(member.ranking)} ${
+                    canEditRanking ? 'cursor-pointer hover:ring-2 hover:ring-indigo-400 transition-all' : 'cursor-default'
+                  }`}
+                  title={canEditRanking ? "Click to change ranking" : "Premium plan required to edit rankings"}
+                >
+                  {member.ranking}
+                  {canEditRanking && <ChevronDown className="w-3 h-3 inline ml-1 -mt-0.5" />}
+                </button>
+              )}
             </div>
+
+            {/* Delete button — appears on hover */}
+            <button
+              onClick={() => handleDelete(member._id || member.id, member.name)}
+              className="absolute top-4 left-4 p-1.5 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all z-10"
+              title="Remove staff member"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+
             <div className="p-6">
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">

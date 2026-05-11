@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import { maskPhone } from "./email.js";
 
 dotenv.config();
 
@@ -78,7 +79,7 @@ export const sendSMS = async (to: string, message: string) => {
   // If not in production mode or no credentials, return WhatsApp link as fallback
   if (!username || !apiKey || environment === 'sandbox') {
     const waLink = generateWhatsAppLink(to, message);
-    console.log("SMS not configured for production. WhatsApp fallback link generated:", waLink);
+    console.log(`SMS not configured for production. WhatsApp fallback link generated for ${maskPhone(to)}`);
     return { 
       delivered: false, 
       method: 'whatsapp_link', 
@@ -121,14 +122,14 @@ export const sendSMS = async (to: string, message: string) => {
     if (recipients && recipients.length > 0) {
       const recipient = recipients[0];
       if (recipient.statusCode === 101 || recipient.status === 'Success') {
-        console.log(`SMS successfully sent to ${formattedPhone} (messageId: ${recipient.messageId})`);
+        console.log(`SMS successfully sent to ${maskPhone(formattedPhone)} (messageId: ${recipient.messageId})`);
         return { delivered: true, method: 'sms', messageId: recipient.messageId };
       } else {
         console.warn(`SMS sent but status: ${recipient.status} (code: ${recipient.statusCode})`);
         return { delivered: true, method: 'sms', status: recipient.status };
       }
     } else {
-      console.log(`SMS request accepted: ${data.SMSMessageData?.Message}`);
+      console.log(`SMS request accepted for ${maskPhone(formattedPhone)}: ${data.SMSMessageData?.Message}`);
       return { delivered: true, method: 'sms' };
     }
   } catch (error) {

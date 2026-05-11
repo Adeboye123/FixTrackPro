@@ -1,5 +1,5 @@
 import { Shop } from "../models/index.js";
-import { sendEmail } from "./email.js";
+import { sendEmail, maskEmail } from "./email.js";
 import { subscriptionExpiredHtml } from "./emailTemplates.js";
 
 /**
@@ -29,7 +29,7 @@ async function checkExpiredSubscriptions() {
       shop.subscription_expires_at = undefined;
       await shop.save();
 
-      console.log(`[CRON] Downgraded shop "${shop.name}" (${shop.email}) from ${previousPlan} to Free`);
+      console.log(`[CRON] Downgraded shop "${shop.name}" (${maskEmail(shop.email)}) from ${previousPlan} to Free`);
 
       // Send notification email
       try {
@@ -44,7 +44,7 @@ async function checkExpiredSubscriptions() {
           })
         );
       } catch (emailErr) {
-        console.error(`[CRON] Failed to send expiry email to ${shop.email}:`, emailErr);
+        console.error(`[CRON] Failed to send expiry email to ${maskEmail(shop.email)}:`, emailErr);
       }
     }
 

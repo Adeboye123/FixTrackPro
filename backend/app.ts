@@ -35,8 +35,8 @@ app.use(cors({
 app.use(morgan("dev"));
 app.use(express.json());
 
-// Serve uploaded files (logos, etc.)
-app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
+// Legacy: static uploads removed — logos are now stored as base64 data URIs in MongoDB
+// This ensures persistence on ephemeral filesystems like Render
 
 // API Routes
 app.use("/api/auth", authRoutes);

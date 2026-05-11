@@ -84,6 +84,21 @@ export const api = {
                 body: JSON.stringify(data)
             });
             return handleResponse(res);
+        },
+        updateRanking: async (id: string, ranking: string) => {
+            const res = await fetch(`${API_URL}/staff/${id}/ranking`, {
+                method: 'PATCH',
+                headers: getHeaders(),
+                body: JSON.stringify({ ranking })
+            });
+            return handleResponse(res);
+        },
+        delete: async (id: string) => {
+            const res = await fetch(`${API_URL}/staff/${id}`, {
+                method: 'DELETE',
+                headers: getHeaders()
+            });
+            return handleResponse(res);
         }
     },
     shop: {

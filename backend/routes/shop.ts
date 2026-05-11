@@ -2,7 +2,6 @@ import express from "express";
 import bcrypt from "bcryptjs";
 import multer from "multer";
 import path from "path";
-import fs from "fs";
 import { fileURLToPath } from "url";
 import { Shop, Subscription, Admin } from "../models/index.js";
 import { authenticateToken } from "../middleware/auth.js";
@@ -14,24 +13,10 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, "..", "..", "uploads", "logos");
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Multer config for logo uploads
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadsDir),
-  filename: (req: any, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const uniqueName = `${req.user.id}-${Date.now()}${ext}`;
-    cb(null, uniqueName);
-  }
-});
-
+// Use memory storage instead of disk — works on Render's ephemeral filesystem
+// The image is stored as a base64 data URI in MongoDB
 const uploadMiddleware = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 2 * 1024 * 1024 }, // 2MB max
   fileFilter: (_req, file, cb) => {
     const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/svg+xml'];
@@ -206,7 +191,7 @@ router.post("/subscribe", authenticateToken, async (req: any, res) => {
   res.json({ message: "Subscription upgraded", shop, status: 'success' });
 });
 
-// Logo upload
+// Logo upload — stores as base64 data URI in MongoDB (production-safe for ephemeral filesystems)
 router.post("/logo", authenticateToken, (req: any, res, next) => {
   uploadMiddleware.single("logo")(req, res, (err: any) => {
     if (err) {
@@ -228,21 +213,16 @@ router.post("/logo", authenticateToken, (req: any, res, next) => {
   const shop = await Shop.findById(req.user.id);
   if (!shop) return res.status(404).json({ error: "Shop not found" });
 
-  // Delete old logo file if exists
-  if (shop.logo_url) {
-    const oldPath = path.join(__dirname, "..", "..", shop.logo_url.replace(/^\//, ''));
-    if (fs.existsSync(oldPath)) {
-      fs.unlinkSync(oldPath);
-    }
-  }
+  // Convert the uploaded buffer to a base64 data URI
+  const base64 = req.file.buffer.toString('base64');
+  const dataUri = `data:${req.file.mimetype};base64,${base64}`;
 
-  const logoUrl = `/uploads/logos/${req.file.filename}`;
-  shop.logo_url = logoUrl;
+  shop.logo_url = dataUri;
   await shop.save();
 
   res.json({
     message: "Logo uploaded successfully",
-    logoUrl,
+    logoUrl: dataUri,
     shop: {
       id: shop._id,
       name: shop.name,
@@ -260,13 +240,6 @@ router.post("/logo", authenticateToken, (req: any, res, next) => {
 router.delete("/logo", authenticateToken, async (req: any, res) => {
   const shop = await Shop.findById(req.user.id);
   if (!shop) return res.status(404).json({ error: "Shop not found" });
-
-  if (shop.logo_url) {
-    const oldPath = path.join(__dirname, "..", "..", shop.logo_url.replace(/^\//, ''));
-    if (fs.existsSync(oldPath)) {
-      fs.unlinkSync(oldPath);
-    }
-  }
 
   shop.logo_url = '';
   await shop.save();

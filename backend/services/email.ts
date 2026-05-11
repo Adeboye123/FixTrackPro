@@ -3,6 +3,21 @@ import path from "path";
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
+// Mask sensitive data in logs to prevent PII leakage
+export const maskEmail = (email: string): string => {
+  if (!email || !email.includes('@')) return '******';
+  const [local, domain] = email.split('@');
+  const visible = local.slice(-2);
+  return `******${visible}@${domain}`;
+};
+
+export const maskPhone = (phone: string): string => {
+  if (!phone) return '******';
+  const cleaned = phone.replace(/\D/g, '');
+  if (cleaned.length < 4) return '******';
+  return `******${cleaned.slice(-2)}`;
+};
+
 // Brevo (formerly Sendinblue) Transactional Email API
 // Uses HTTPS (port 443) — works on Render free tier where SMTP ports are blocked
 const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
@@ -43,9 +58,9 @@ export const sendEmail = async (to: string, subject: string, text: string, html?
     }
 
     const result = await response.json();
-    console.log(`✅ Email sent to ${to} (Brevo Message ID: ${result.messageId})`);
+    console.log(`✅ Email sent to ${maskEmail(to)} (Brevo Message ID: ${result.messageId})`);
   } catch (error: any) {
     console.error("❌ Email sending failed:", error.message || error);
-    console.log(`[EMAIL FALLBACK] To: ${to} - ${subject}: ${text}`);
+    console.log(`[EMAIL FALLBACK] To: ${maskEmail(to)} - ${subject}`);
   }
 };

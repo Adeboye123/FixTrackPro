@@ -1,7 +1,7 @@
 import express from "express";
 import { Staff, Repair } from "../models/index.js";
 import { authenticateToken } from "../middleware/auth.js";
-import { checkStaffLimit } from "../middleware/planMiddleware.js";
+import { checkStaffLimit, requireFeature } from "../middleware/planMiddleware.js";
 
 const router = express.Router();
 
@@ -35,6 +35,31 @@ router.post("/", authenticateToken, checkStaffLimit(), async (req: any, res) => 
   });
   await s.save();
   res.status(201).json({ id: s._id.toString() });
+});
+
+// Edit staff ranking — requires Premium or Trial (editStaffRanking feature)
+router.patch("/:id/ranking", authenticateToken, requireFeature('editStaffRanking'), async (req: any, res) => {
+  const { ranking } = req.body;
+  const validRanks = ['Bronze', 'Silver', 'Gold', 'Platinum'];
+
+  if (!ranking || !validRanks.includes(ranking)) {
+    return res.status(400).json({ error: `Invalid ranking. Must be one of: ${validRanks.join(', ')}` });
+  }
+
+  const staff = await Staff.findOne({ _id: req.params.id, shop_id: req.user.id });
+  if (!staff) return res.status(404).json({ error: "Staff member not found" });
+
+  staff.ranking = ranking;
+  await staff.save();
+
+  res.json({ message: "Staff ranking updated", staffId: staff._id, ranking });
+});
+
+// Delete staff member
+router.delete("/:id", authenticateToken, async (req: any, res) => {
+  const staff = await Staff.findOneAndDelete({ _id: req.params.id, shop_id: req.user.id });
+  if (!staff) return res.status(404).json({ error: "Staff member not found" });
+  res.json({ message: "Staff member removed" });
 });
 
 export default router;
